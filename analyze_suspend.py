@@ -5171,9 +5171,9 @@ def submitMultiTimeline(htmlsummary, submit):
 	submitAttachment(msubmit, mstamp, out['bugid'], file, 'Summary')
 	print('DONE')
 
-def outputResult(stamp, bugurl=''):
-	fp = open(sysvals.result, 'a')
-	for v in ['suspend', 'resume', 'boot']:
+def outputResult(file, stamp, bugurl=''):
+	fp = open(file, 'a')
+	for v in ['suspend', 'resume', 'boot', 'lastinit']:
 		if v in stamp:
 			fp.write('%s|%.3f\n' % (v, stamp[v]))
 	for v in ['fwsuspend', 'fwresume']:
@@ -5445,7 +5445,7 @@ def runTest():
 	sysvals.sudouser(sysvals.testdir)
 
 	if sysvals.result:
-		outputResult(stamp)
+		outputResult(sysvals.result, stamp)
 
 def find_in_html(html, strs, div=False):
 	for str in strs:
@@ -5991,7 +5991,7 @@ if __name__ == '__main__':
 				submit, stamp, htmlfile = rerunTest(db)
 				out = submitTimeline(submit, stamp, [htmlfile])
 				if sysvals.result:
-					outputResult(stamp, out['bugurl'])
+					outputResult(sysvals.result, stamp, out['bugurl'])
 				os.remove(htmlfile)
 			elif db['submit'] == 'bugreport':
 				if not sysvals.dmesgfile or not sysvals.ftracefile:
@@ -6004,7 +6004,7 @@ if __name__ == '__main__':
 		else:
 			submit, stamp, htmlfile = rerunTest()
 			if sysvals.result:
-				outputResult(stamp)
+				outputResult(sysvals.result, stamp)
 		sys.exit()
 
 	# verify that we can run a test
