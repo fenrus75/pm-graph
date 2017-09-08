@@ -5179,10 +5179,6 @@ def outputResult(file, stamp, bugurl=''):
 	for v in ['fwsuspend', 'fwresume']:
 		if v in stamp:
 			fp.write('%s|%.3f\n' % (v, stamp[v] / 1000000.0))
-	if 'offenders' in stamp:
-		if len(stamp['offenders']) >= 3:
-			for i in range(3):
-				fp.write('worst%d|%s\n' % (i+1, stamp['offenders'][i]))
 	if bugurl:
 		fp.write('url|%s\n' % bugurl)
 	fp.close()
@@ -5366,7 +5362,6 @@ def processData(live=False):
 	stamp['suspend'], stamp['resume'] = data.getTimeValues()
 	if data.fwValid:
 		stamp['fwsuspend'], stamp['fwresume'] = data.fwSuspend, data.fwResume
-	stamp['offenders'] = data.worstOffenders(sysvals.devprops)
 	return (testruns, stamp)
 
 def bugReport(sv, submit):
@@ -5426,8 +5421,10 @@ def rerunTest(submit=False):
 		elif not os.access(sysvals.htmlfile, os.W_OK):
 			doError('missing permission to write to %s' % sysvals.htmlfile)
 	testruns, stamp = processData(False)
-	if submit and sysvals.extra:
-		submit['extra'] = sysvals.extra
+	if submit:
+		stamp['offenders'] = testruns[0].worstOffenders(sysvals.devprops)
+		if sysvals.extra:
+			submit['extra'] = sysvals.extra
 	return (submit, stamp, sysvals.htmlfile)
 
 # Function: runTest

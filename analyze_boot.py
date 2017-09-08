@@ -1117,8 +1117,8 @@ if __name__ == '__main__':
 
 	sysvals.stamp['boot'] = (data.tUserMode - data.start) * 1000
 	sysvals.stamp['lastinit'] = data.end * 1000
-	sysvals.stamp['offenders'] = data.worstOffenders()
 	if 'submit' in db:
+		sysvals.stamp['offenders'] = data.worstOffenders()
 		if sysvals.extra:
 			db['extra'] = sysvals.extra
 		out = aslib.submitTimeline(db, sysvals.stamp, [sysvals.htmlfile])
