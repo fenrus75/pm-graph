@@ -750,7 +750,7 @@ class SystemValues:
 	def outputResult(self, testdata):
 		if not self.result:
 			return
-		fp = open(self.result, 'w')
+		fp = open(self.result, 'a')
 		if 'error' in testdata:
 			fp.write('result: fail\n')
 			fp.write('error: %s\n' % testdata['error'])
