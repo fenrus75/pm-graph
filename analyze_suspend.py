@@ -252,13 +252,19 @@ class SystemValues:
 		if(os.access(self.powerfile, os.W_OK)):
 			return True
 		if fatal:
-			doError('This command requires sysfs mount and root access')
+			msg = 'This command requires sysfs mount and root access'
+			print('ERROR: %s\n') % msg
+			self.outputResult({'error':msg})
+			sys.exit()
 		return False
 	def rootUser(self, fatal=False):
 		if 'USER' in os.environ and os.environ['USER'] == 'root':
 			return True
 		if fatal:
-			doError('This command must be run as root')
+			msg = 'This command must be run as root'
+			print('ERROR: %s\n') % msg
+			self.outputResult({'error':msg})
+			sys.exit()
 		return False
 	def getExec(self, cmd):
 		dirlist = ['/sbin', '/bin', '/usr/sbin', '/usr/bin',
@@ -741,6 +747,24 @@ class SystemValues:
 			'SUDO_USER' in os.environ:
 			cmd = 'chown -R {0}:{0} {1} > /dev/null 2>&1'
 			call(cmd.format(os.environ['SUDO_USER'], dir), shell=True)
+	def outputResult(self, testdata):
+		if not self.result:
+			return
+		fp = open(self.result, 'a')
+		if 'error' in testdata:
+			fp.write('result: fail\n')
+			fp.write('error: %s\n' % testdata['error'])
+		else:
+			fp.write('result: pass\n')
+		for v in ['suspend', 'resume', 'boot', 'lastinit']:
+			if v in testdata:
+				fp.write('%s: %.3f\n' % (v, testdata[v]))
+		for v in ['fwsuspend', 'fwresume']:
+			if v in testdata:
+				fp.write('%s: %.3f\n' % (v, testdata[v] / 1000000.0))
+		if 'bugurl' in testdata:
+			fp.write('url: %s\n' % testdata['bugurl'])
+		fp.close()
 
 sysvals = SystemValues()
 suspendmodename = {
@@ -3605,8 +3629,7 @@ def createHTML(testruns):
 		tTotal = data.end - data.start
 		sktime, rktime = data.getTimeValues()
 		if(tTotal == 0):
-			print('ERROR: No timeline data')
-			sys.exit()
+			doError('No timeline data')
 		if(data.tLow > 0):
 			low_time = '%.0f'%(data.tLow*1000)
 		if sysvals.suspendmode == 'command':
@@ -5171,18 +5194,6 @@ def submitMultiTimeline(htmlsummary, submit):
 	submitAttachment(msubmit, mstamp, out['bugid'], file, 'Summary')
 	print('DONE')
 
-def outputResult(file, stamp, bugurl=''):
-	fp = open(file, 'a')
-	for v in ['suspend', 'resume', 'boot', 'lastinit']:
-		if v in stamp:
-			fp.write('%s|%.3f\n' % (v, stamp[v]))
-	for v in ['fwsuspend', 'fwresume']:
-		if v in stamp:
-			fp.write('%s|%.3f\n' % (v, stamp[v] / 1000000.0))
-	if bugurl:
-		fp.write('url|%s\n' % bugurl)
-	fp.close()
-
 # Description:
 #	 Verify that the requested command and options will work, and
 #	 print the results to the terminal
@@ -5292,6 +5303,7 @@ def doError(msg, help=False):
 	if(help == True):
 		printHelp()
 	print('ERROR: %s\n') % msg
+	sysvals.outputResult({'error':msg})
 	sys.exit()
 
 # Function: getArgInt
@@ -5440,9 +5452,7 @@ def runTest():
 	sysvals.cleanupFtrace()
 	testruns, stamp = processData(True)
 	sysvals.sudouser(sysvals.testdir)
-
-	if sysvals.result:
-		outputResult(sysvals.result, stamp)
+	sysvals.outputResult(stamp)
 
 def find_in_html(html, strs, div=False):
 	for str in strs:
@@ -5987,8 +5997,8 @@ if __name__ == '__main__':
 					doError('submit requires both -dmesg and -ftrace')
 				submit, stamp, htmlfile = rerunTest(db)
 				out = submitTimeline(submit, stamp, [htmlfile])
-				if sysvals.result:
-					outputResult(sysvals.result, stamp, out['bugurl'])
+				stamp['bugurl'] = out['bugurl']
+				sysvals.outputResult(stamp)
 				os.remove(htmlfile)
 			elif db['submit'] == 'bugreport':
 				if not sysvals.dmesgfile or not sysvals.ftracefile:
@@ -6000,14 +6010,12 @@ if __name__ == '__main__':
 				submitMultiTimeline('summary.html', db)
 		else:
 			submit, stamp, htmlfile = rerunTest()
-			if sysvals.result:
-				outputResult(sysvals.result, stamp)
+			sysvals.outputResult(stamp)
 		sys.exit()
 
 	# verify that we can run a test
 	if(not statusCheck()):
-		print('Check FAILED, aborting the test run!')
-		sys.exit()
+		doError('Check FAILED, aborting the test run!')
 
 	# extract mem modes and convert
 	mode = sysvals.suspendmode

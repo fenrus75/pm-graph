@@ -824,6 +824,7 @@ def doError(msg, help=False):
 	if help == True:
 		printHelp()
 	print 'ERROR: %s\n' % msg
+	sysvals.outputResult({'error':msg})
 	sys.exit()
 
 # Function: printHelp
@@ -1122,8 +1123,6 @@ if __name__ == '__main__':
 		if sysvals.extra:
 			db['extra'] = sysvals.extra
 		out = aslib.submitTimeline(db, sysvals.stamp, [sysvals.htmlfile])
-		if sysvals.result:
-			aslib.outputResult(sysvals.result, sysvals.stamp, out['bugurl'])
+		sysvals.stamp['bugurl'] = out['bugurl']
 		os.remove(sysvals.htmlfile)
-	elif sysvals.result:
-		aslib.outputResult(sysvals.result, sysvals.stamp)
+	sysvals.outputResult(sysvals.stamp)
